@@ -108,7 +108,7 @@ get_ticker_loop <- function(df){
 # get tickers from GOOGLE
 # ---------------------------------------------------------
 
-setwd("F:/Quant/KLSE/analysis script/get_ticker/")
+setwd("path/to/folder")
 
 fpath <- getwd()
 fname <- grep("klse main",list.files(),value=T)
