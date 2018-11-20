@@ -12,6 +12,7 @@ library(pacman)
 p_load(httr)
 p_load(dplyr)
 p_load(xml2)
+p_load(data.table)
 
 # ---------------------------------------------------------
 dirwork <- "/home/speedy/Desktop/intrno"
@@ -49,10 +50,11 @@ parseHTML <- function( HTMLcontent){
 }
 
 # extract into dataframe
-makeDF <- function( datanodes, dfdata){
+makeDF <- function( datanodes, dfdata, output=F){
     # run this in a loop based on length of  datanodes
     for(k in seq(2, length(datanodes))){
         newnode <- xml_new_root(datanodes[[k]])
+        # print(newnode)
 
         # shariah compliance
         shariah <- xml_find_all(newnode, "//img[@src]") %>%
@@ -63,6 +65,17 @@ makeDF <- function( datanodes, dfdata){
                       strsplit(".png") %>%
                       unlist
 
+        # board
+        board <- ifelse( xml_child(newnode) %>% xml_child() %>%
+                                    length() < 1,
+                        "",
+                        xml_find_all(newnode, "//span[@class]") %>%
+                            xml_text()
+                        )
+        # board <- xml_find_all(newnode, "//span[@class]") %>%
+        #             xml_text()
+
+        # company name
         part1 <- newnode %>%
                   xml_find_all("//h3") %>%
                   xml_text() %>%
@@ -78,9 +91,14 @@ makeDF <- function( datanodes, dfdata){
         part2 <- newnode %>%
                   xml_find_all("//td") %>%
                   xml_text()
-        # print(part2[3:8])
+        # print(part2)
 
-        rowdf <- c(part1[2], tickcode, shariah, part2[3:8])
+        rowdf <- c(part1[2],      # company name
+                   tickcode,      # code
+                   board,         # main board, ACE
+                   shariah,       # shariah compliance
+                   part2[3:8])    # sector, market cap, last price, PE, DY, ROE
+        ifelse( output, cat( "\n\t", rowdf), NA)
         dfdata[k-1,] <- rowdf
     }
     return(dfdata)
@@ -92,11 +110,13 @@ makeDF <- function( datanodes, dfdata){
 # define vector of pages
 lspage <- sample(c(LETTERS, "0"))
 
+lsdone <- c()
 cat("\n\n\t ##### Starting stock sraper #####\n\n")
-for(k in seq(2)){
-# for(k in seq_along(lspage)){
+# for(k in seq(21,27)){
+for(k in seq_along(lspage)){
     currpage <- lspage[k]
-    cat( paste0("\n\n--------- Iteration: [", currpage, "]"))
+    lsdone <- c( lsdone, currpage)
+    cat( paste0("\n\n--------- Iteration: [", k, ":", currpage, "]"))
     datanodes <- getHTML(currpage) %>%
     parseHTML()
 
@@ -104,7 +124,7 @@ for(k in seq(2)){
       xml_contents() %>%
       as_list() %>%
       unlist()
-    coln <- c(header[1],"code",header[2:8])
+    coln <- c(header[1],"code", "market", header[2:8])
 
     #create dataframe
     dfdata <- data.frame( matrix( ncol=length(coln), nrow=0)) %>%
@@ -128,9 +148,28 @@ for(k in seq(2)){
     Sys.sleep(sleeptime)
 }
 
+mergeData <- function(folderpath, filename){
+        lsfiles <- list.files( folderpath)
+        mergedexist <- grep("all", lsfiles)
+        if( length(mergedexist) > 0){ lsfiles <- lsfiles[-mergedexist] }
+        print(lsfiles)
+         dffinal <- data.frame()
+         for(k in seq_along(lsfiles)){
+            dfin <- as.data.frame(fread(
+                                file.path(folderpath, lsfiles[k])))
+            dffinal <- rbind( dffinal, dfin)
+         }
+
+          write.csv( dffinal, file= file.path(folderpath,filename),
+                        row.names=F)
+}
+
+mergeData( pathout, "1all_stockdata.csv")
 
 
-
-
-
-
+# ---------------------------------------------------------
+# ---------------------------------------------------------
+# ---------------------------------------------------------
+# ---------------------------------------------------------
+# ---------------------------------------------------------
+# ---------------------------------------------------------
