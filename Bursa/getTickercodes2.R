@@ -148,23 +148,40 @@ for(k in seq_along(lspage)){
     Sys.sleep(sleeptime)
 }
 
-mergeData <- function(folderpath, filename){
+mergeData <- function(folderpath, filename, write=F){
         lsfiles <- list.files( folderpath)
         mergedexist <- grep("all", lsfiles)
         if( length(mergedexist) > 0){ lsfiles <- lsfiles[-mergedexist] }
         print(lsfiles)
          dffinal <- data.frame()
-         for(k in seq_along(lsfiles)){
+        for(k in seq_along(lsfiles)){
             dfin <- as.data.frame(fread(
                                 file.path(folderpath, lsfiles[k])))
             dffinal <- rbind( dffinal, dfin)
          }
 
-          write.csv( dffinal, file= file.path(folderpath,filename),
+        if( write == TRUE){
+        write.csv( dffinal, file= file.path(folderpath,filename),
                         row.names=F)
+        }
+        if( write==FALSE){
+            return(dffinal)
+        }
 }
 
-mergeData( pathout, "1all_stockdata.csv")
+dfmerge <- mergeData( pathout, write-F)
+
+# filters
+filtmain <- dfmerge$market == "MAIN"
+filtshariah <- dfmerge$Shariah == "Yes"
+
+dfmain <- dfmerge[ which(filtmain),]
+dfshariah <- dfmerge[ which(filtmain & filtshariah),]
+
+write.csv(dfmain, file= file.path(pathout, "all_main_data.csv"),
+          row.names=F)
+write.csv(dfshariah, file= file.path(pathout, "all_main_shariah_data.csv"),
+          row.names=F)
 
 
 # ---------------------------------------------------------
